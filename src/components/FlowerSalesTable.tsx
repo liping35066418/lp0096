@@ -1,30 +1,40 @@
-import type { FlowerSalesStat } from '@/types/stats';
+import { type StatsDimension } from '@/types/stats';
 
-interface FlowerSalesTableProps {
-  sales: FlowerSalesStat[];
+interface TableItem {
+  key: string;
+  name: string;
+  totalQuantity: number;
+  totalAmount: number;
 }
 
-export default function FlowerSalesTable({ sales }: FlowerSalesTableProps) {
-  if (sales.length === 0) {
+interface FlowerSalesTableProps {
+  items: TableItem[];
+  dimension: StatsDimension;
+  totalQuantity: number;
+  totalAmount: number;
+}
+
+export default function FlowerSalesTable({ items, dimension, totalQuantity, totalAmount }: FlowerSalesTableProps) {
+  const title = dimension === 'item' ? '🌸 各类鲜花销售统计' : '🌸 各品类鲜花销售统计';
+  const nameColumn = dimension === 'item' ? '花材名称' : '品类名称';
+
+  if (items.length === 0) {
     return (
       <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🌸 各类鲜花销售统计</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
         <p className="text-center text-gray-400 py-8">暂无数据</p>
       </div>
     );
   }
 
-  const totalQuantity = sales.reduce((sum, s) => sum + s.totalQuantity, 0);
-  const totalAmount = sales.reduce((sum, s) => sum + s.totalAmount, 0);
-
   return (
     <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-5">🌸 各类鲜花销售统计</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-5">{title}</h3>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100">
-              <th className="pb-3 text-left text-sm font-medium text-gray-500">花材名称</th>
+              <th className="pb-3 text-left text-sm font-medium text-gray-500">{nameColumn}</th>
               <th className="pb-3 text-right text-sm font-medium text-gray-500">销售数量</th>
               <th className="pb-3 text-right text-sm font-medium text-gray-500">占比</th>
               <th className="pb-3 text-right text-sm font-medium text-gray-500">销售金额</th>
@@ -32,16 +42,16 @@ export default function FlowerSalesTable({ sales }: FlowerSalesTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {sales.map((item) => (
-              <tr key={item.flowerId} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-3.5 text-sm font-medium text-gray-800">{item.flowerName}</td>
+            {items.map((item) => (
+              <tr key={item.key} className="hover:bg-gray-50/50 transition-colors">
+                <td className="py-3.5 text-sm font-medium text-gray-800">{item.name}</td>
                 <td className="py-3.5 text-sm text-right text-gray-600">{item.totalQuantity} 枝</td>
                 <td className="py-3.5 text-sm text-right text-gray-500">
-                  {((item.totalQuantity / totalQuantity) * 100).toFixed(1)}%
+                  {totalQuantity > 0 ? ((item.totalQuantity / totalQuantity) * 100).toFixed(1) : '0.0'}%
                 </td>
                 <td className="py-3.5 text-sm text-right text-pink-600 font-semibold">¥{item.totalAmount.toFixed(2)}</td>
                 <td className="py-3.5 text-sm text-right text-gray-500">
-                  {((item.totalAmount / totalAmount) * 100).toFixed(1)}%
+                  {totalAmount > 0 ? ((item.totalAmount / totalAmount) * 100).toFixed(1) : '0.0'}%
                 </td>
               </tr>
             ))}

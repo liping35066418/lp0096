@@ -1,6 +1,9 @@
+export type StatsDimension = 'item' | 'category';
+
 export interface FlowerSalesStat {
   flowerId: string;
   flowerName: string;
+  category: string;
   totalQuantity: number;
   totalAmount: number;
 }

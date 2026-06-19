@@ -1,14 +1,42 @@
-import { useState, useEffect } from 'react';
-import { DollarSign, ShoppingBag, Users, Flower2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { DollarSign, ShoppingBag, Users, Flower2, ChevronDown } from 'lucide-react';
 import StatCard from '@/components/StatCard';
 import TopFlowers from '@/components/TopFlowers';
 import FlowerSalesTable from '@/components/FlowerSalesTable';
-import type { StatsData, ApiResponse } from '@/types/stats';
+import { type StatsData, type ApiResponse, type StatsDimension, type FlowerSalesStat } from '@/types/stats';
 
 type Period = 'day' | 'week';
 
+interface CategorySalesStat {
+  key: string;
+  name: string;
+  totalQuantity: number;
+  totalAmount: number;
+}
+
+function aggregateByCategory(sales: FlowerSalesStat[]): CategorySalesStat[] {
+  const map = new Map<string, CategorySalesStat>();
+  for (const item of sales) {
+    const existing = map.get(item.category);
+    if (existing) {
+      existing.totalQuantity += item.totalQuantity;
+      existing.totalAmount += item.totalAmount;
+    } else {
+      map.set(item.category, {
+        key: `cat:${item.category}`,
+        name: item.category,
+        totalQuantity: item.totalQuantity,
+        totalAmount: item.totalAmount,
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
+}
+
 export default function Home() {
   const [period, setPeriod] = useState<Period>('day');
+  const [dimension, setDimension] = useState<StatsDimension>('item');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +62,46 @@ export default function Home() {
 
     fetchStats();
   }, [period]);
+
+  useEffect(() => {
+    setSelectedKey(null);
+  }, [dimension, period]);
+
+  const processedData = useMemo(() => {
+    if (!data) return null;
+
+    if (dimension === 'item') {
+      const topList = data.topFlowers.map((f) => ({
+        key: f.flowerId,
+        name: f.flowerName,
+        totalQuantity: f.totalQuantity,
+        totalAmount: f.totalAmount,
+      }));
+
+      let tableList = data.flowerSales.map((f) => ({
+        key: f.flowerId,
+        name: f.flowerName,
+        totalQuantity: f.totalQuantity,
+        totalAmount: f.totalAmount,
+      }));
+
+      if (selectedKey) {
+        tableList = tableList.filter((t) => t.key === selectedKey);
+      }
+
+      return { topList, tableList };
+    } else {
+      const categoryTop = aggregateByCategory(data.flowerSales).slice(0, 5);
+
+      let tableList = aggregateByCategory(data.flowerSales);
+
+      if (selectedKey) {
+        tableList = tableList.filter((t) => t.key === selectedKey);
+      }
+
+      return { topList: categoryTop, tableList };
+    }
+  }, [data, dimension, selectedKey]);
 
   const formatDateRange = (start: string, end: string): string => {
     if (start === end) return start;
@@ -62,7 +130,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex rounded-xl bg-white p-1 shadow-sm border border-gray-100">
                 <button
                   onClick={() => setPeriod('day')}
@@ -84,6 +152,18 @@ export default function Home() {
                 >
                   单周统计
                 </button>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={dimension}
+                  onChange={(e) => setDimension(e.target.value as StatsDimension)}
+                  className="appearance-none pl-4 pr-10 py-2.5 rounded-xl bg-white shadow-sm border border-gray-100 text-sm font-medium text-gray-700 cursor-pointer hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-300 transition-all"
+                >
+                  <option value="item">按单品</option>
+                  <option value="category">按品类</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -135,10 +215,20 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-2">
-                <TopFlowers flowers={data.topFlowers} />
+                <TopFlowers
+                  items={processedData!.topList}
+                  selectedKey={selectedKey}
+                  onSelect={setSelectedKey}
+                  dimension={dimension}
+                />
               </div>
               <div className="lg:col-span-3">
-                <FlowerSalesTable sales={data.flowerSales} />
+                <FlowerSalesTable
+                  items={processedData!.tableList}
+                  dimension={dimension}
+                  totalQuantity={data.summary.totalFlowerQuantity}
+                  totalAmount={data.summary.totalRevenue}
+                />
               </div>
             </div>
           </>

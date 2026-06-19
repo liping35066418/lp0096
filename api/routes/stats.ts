@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from 'express';
-import { orders } from '../data/orders.js';
+import { orders, flowers } from '../data/orders.js';
 import type { Order } from '../data/flowers.js';
 
 const router = express.Router();
@@ -7,6 +7,7 @@ const router = express.Router();
 interface FlowerSalesStat {
   flowerId: string;
   flowerName: string;
+  category: string;
   totalQuantity: number;
   totalAmount: number;
 }
@@ -70,6 +71,11 @@ function getDateRange(period: 'day' | 'week'): { start: string; end: string } {
   }
 }
 
+function getFlowerCategory(flowerId: string): string {
+  const flower = flowers.find((f) => f.id === flowerId);
+  return flower ? flower.category : '其他';
+}
+
 function calculateFlowerSales(filteredOrders: Order[]): FlowerSalesStat[] {
   const salesMap = new Map<string, FlowerSalesStat>();
 
@@ -83,6 +89,7 @@ function calculateFlowerSales(filteredOrders: Order[]): FlowerSalesStat[] {
         salesMap.set(item.flowerId, {
           flowerId: item.flowerId,
           flowerName: item.flowerName,
+          category: getFlowerCategory(item.flowerId),
           totalQuantity: item.quantity,
           totalAmount: item.subtotal,
         });

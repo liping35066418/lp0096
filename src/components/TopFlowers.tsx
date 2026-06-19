@@ -1,7 +1,17 @@
-import type { FlowerSalesStat } from '@/types/stats';
+import { type StatsDimension } from '@/types/stats';
+
+interface TopItem {
+  key: string;
+  name: string;
+  totalQuantity: number;
+  totalAmount: number;
+}
 
 interface TopFlowersProps {
-  flowers: FlowerSalesStat[];
+  items: TopItem[];
+  selectedKey: string | null;
+  onSelect: (key: string | null) => void;
+  dimension: StatsDimension;
 }
 
 function getRankStyle(rank: number): string {
@@ -17,41 +27,81 @@ function getRankStyle(rank: number): string {
   }
 }
 
-export default function TopFlowers({ flowers }: TopFlowersProps) {
-  if (flowers.length === 0) {
+export default function TopFlowers({ items, selectedKey, onSelect, dimension }: TopFlowersProps) {
+  const title = dimension === 'item' ? '🏆 热销花材榜单' : '🏆 热销品类榜单';
+
+  if (items.length === 0) {
     return (
       <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🏆 热销花材榜单</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
         <p className="text-center text-gray-400 py-8">暂无数据</p>
       </div>
     );
   }
 
-  const maxQuantity = Math.max(...flowers.map((f) => f.totalQuantity));
+  const maxQuantity = Math.max(...items.map((f) => f.totalQuantity));
+
+  const handleClick = (key: string) => {
+    if (selectedKey === key) {
+      onSelect(null);
+    } else {
+      onSelect(key);
+    }
+  };
 
   return (
     <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-5">🏆 热销花材榜单</h3>
-      <div className="space-y-4">
-        {flowers.map((flower, index) => {
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        {selectedKey && (
+          <button
+            onClick={() => onSelect(null)}
+            className="text-xs text-pink-600 hover:text-pink-700 font-medium transition-colors"
+          >
+            取消筛选
+          </button>
+        )}
+      </div>
+      <div className="space-y-3">
+        {items.map((item, index) => {
           const rank = index + 1;
-          const percentage = (flower.totalQuantity / maxQuantity) * 100;
+          const percentage = (item.totalQuantity / maxQuantity) * 100;
+          const isSelected = selectedKey === item.key;
           return (
-            <div key={flower.flowerId} className="flex items-center gap-4">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold ${getRankStyle(rank)}`}>
+            <div
+              key={item.key}
+              onClick={() => handleClick(item.key)}
+              className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all ${
+                isSelected
+                  ? 'bg-pink-50 border-2 border-pink-300 shadow-sm'
+                  : 'hover:bg-gray-50 border-2 border-transparent'
+              }`}
+            >
+              <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold flex-shrink-0 ${getRankStyle(rank)}`}>
                 {rank}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-800 truncate">{flower.flowerName}</span>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="text-gray-500">{flower.totalQuantity} 枝</span>
-                    <span className="text-pink-600 font-semibold">¥{flower.totalAmount.toFixed(2)}</span>
+                  <span className="text-sm font-medium text-gray-800 truncate">
+                    {item.name}
+                    {isSelected && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-pink-500 text-white">
+                        已选中
+                      </span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-3 text-sm flex-shrink-0 ml-2">
+                    <span className="text-gray-500">{item.totalQuantity} 枝</span>
+                    <span className="text-pink-600 font-semibold">¥{item.totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500"
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-pink-500 to-rose-600'
+                        : 'bg-gradient-to-r from-pink-400 to-rose-500'
+                    }`}
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
