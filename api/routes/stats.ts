@@ -136,4 +136,27 @@ router.get('/stats', (req: Request, res: Response): void => {
   });
 });
 
+router.get('/orders', (req: Request, res: Response): void => {
+  const period = (req.query.period as 'day' | 'week') || 'day';
+
+  if (period !== 'day' && period !== 'week') {
+    res.status(400).json({
+      success: false,
+      error: 'period 参数必须为 day 或 week',
+    });
+    return;
+  }
+
+  const filteredOrders = filterOrdersByPeriod(period);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      period,
+      dateRange: getDateRange(period),
+      orders: filteredOrders,
+    },
+  });
+});
+
 export default router;
